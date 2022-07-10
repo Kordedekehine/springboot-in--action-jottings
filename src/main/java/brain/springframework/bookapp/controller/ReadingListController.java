@@ -1,8 +1,10 @@
 package brain.springframework.bookapp.controller;
 
 import brain.springframework.bookapp.entity.Book;
+import brain.springframework.bookapp.properties.AmazonProperties;
 import brain.springframework.bookapp.repository.ReadingListRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,15 +21,28 @@ import java.util.List;
 
 @Controller
 @RequestMapping("/")
-public class ReadingListController {
 
+public class ReadingListController {
+@Autowired
+    private AmazonProperties amazonProperties;
+@Autowired
     private ReadingListRepository readingListRepository;
+
+//    @Autowired
+//    public ReadingListController(AmazonProperties amazonProperties,
+//                                 ReadingListRepository readingListRepository) {
+//        this.amazonProperties = amazonProperties;
+//        this.readingListRepository = readingListRepository;
+//    }
+
     @Autowired
     public ReadingListController(
             ReadingListRepository readingListRepository) {
         this.readingListRepository = readingListRepository;
 
     }
+
+
 
     /**
      * readersBooks()—Handles HTTP GET requests for /{reader} by retrieving a
@@ -47,9 +62,19 @@ public class ReadingListController {
                 readingListRepository.findByReader(reader);
         if (readingList != null) {
             model.addAttribute("books", readingList);
+            model.addAttribute("reader",reader);
+            model.addAttribute("amazonID",amazonProperties.getAssociateId());
         }
         return "readingList";
     }
+
+    /**
+     *  Putting this all together, we’ve specified that ReadingListController should have
+     * its properties injected from “amazon”-prefixed configuration properties. ReadingListController has only one property with a setter method—the associateId property. Therefore, all we need to do to specify the Amazon Associate ID is to add an
+     * amazon.associateId property in one of the supported property source locations.
+     *  For example, we could set that property in application.properties:
+     * amazon.associateId=habuma-20
+     */
 
     /**
      * Handles HTTP POST requests for /{reader}, binding the

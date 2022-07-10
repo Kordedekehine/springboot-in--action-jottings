@@ -37,5 +37,10 @@ No description available</span>
 </textarea><br/>
     <input type="submit"></input>
 </form>
+
+<a th:href="'http://www.amazon.com/gp/product/'
++ ${book.isbn}
++ '/tag=' + ${amazonID}"
+   th:text="${book.title}">Title</a>
 </body>
 </html>

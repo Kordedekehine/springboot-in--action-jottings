@@ -1,0 +1,105 @@
+SPRING BOOT PROVIDE US WITH AUTO CONFIGURATION,RIGHT? BUT SOMETIMES WE WANT TO CUSTOMIZE THIS CONFIGURATION
+BY OURSELVES. TO ACHIEVE THAT WE NEED TO OVERRIDE THE AUTOCONFIGURATION..SECURITY AS AN INSTANCE IN THIS
+BOOK EXPLAINED HOW OVERRIDING WORKS
+
+SecurityConfig is a very basic Spring Security configuration. Even so, it does a lot of
+what we need to customize security of the reading-list application. By providing this
+custom security configuration class, we’re asking Spring Boot to skip security
+autoconfiguration and to use our security configuration instead
+
+ Again, all you need to do to override Spring Boot auto-configuration is to write
+explicit configuration. Spring Boot will see your configuration, step back, and let your
+configuration take precedence.
+
+
+There are, in fact, several ways to set properties for a Spring Boot application. Spring
+Boot will draw properties from several property sources, including the following:
+1 Command-line arguments
+2 JNDI attributes from java:comp/env
+3 JVM system properties
+4 Operating system environment variables
+5 Randomly generated values for properties prefixed with random.* (referenced
+when setting other properties, such as `${random.long})
+6 An application.properties or application.yml file outside of the application
+Licensed to Thomas Snead <n.ordickan@gmail.com> www.it-ebooks.info
+58 CHAPTER 3 Customizing configuration
+7 An application.properties or application.yml file packaged inside of the
+application
+8 Property sources specified by @PropertySource
+9 Default properties
+This list is in order of precedence. That is, any property set from a source higher in
+the list will override the same property set on a source lower in the list. Command-line
+arguments, for instance, override properties from any other property source.
+ As for the application.properties and application.yml files, they can reside in any
+of four locations:
+1 Externally, in a /config subdirectory of the directory from which the application is run
+2 Externally, in the directory from which the application is run
+3 Internally, in a package named “config”
+4 Internally, at the root of the classpath
+Again, this list is in order of precedence. That is, an application.properties file in a
+/config subdirectory will override the same properties set in an application.properties
+file in the application’s classpath.
+ Also, I’ve found that if you have both application.properties and application.yml
+side by side at the same level of precedence, properties in application.yml will override those in application.properties.
+
+
+WORKING WITH PROFILE-SPECIFIC PROPERTIES FILES
+If you’re using application.properties to express configuration properties, you can
+provide profile-specific properties by creating additional properties files named with
+the pattern “application-{profile}.properties”.
+ For the logging scenario, the development configuration would be in a file named
+application-development.properties and contain properties for verbose, consolewritten logging:
+logging.level.root=DEBUG
+But for production, application-production.properties would configure logging to be
+at WARN level and higher
+
+
+ON OVERRIDING AN ERROR PAGE
+Spring Boot offers this “whitelabel” error page by default as part of auto-configuration.
+Even though it’s slightly more attractive than a stack trace, it doesn’t compare with some
+of the great works of error art available on the internet. In the interest of presenting your
+application failures as masterpieces, you’ll probably want to create a custom error page
+for your applications.
+ The default error handler that’s auto-configured by Spring Boot looks for a view
+whose name is “error”. If it can’t find one, it uses its default whitelabel error view
+shown in figure 3.1. Therefore, the easiest way to customize the error page is to create
+a custom view that will resolve for a view named “error”.
+ Ultimately this depends on the view resolvers in place when the error view is being
+resolved. This includes
+■ Any bean that implements Spring’s View interface and has a bean ID of “error”
+(resolved by Spring’s BeanNameViewResolver)
+■ A Thymeleaf template named “error.html” if Thymeleaf is configured
+■ A FreeMarker template named “error.ftl” if FreeMarker is configured
+■ A Velocity template named “error.vm” if Velocity is configured
+■ A JSP template named “error.jsp” if using JSP views
+Because we’re using Thymeleaf for the reading-list application, all we must do to customize the error page is create a file named “error.html” and place it in the templates
+folder along with our other application templates. Listing 3.7 shows a simple, yet
+effective replacement for the default whitelabel error page.
+
+
+For the most part, this is a simple Thymeleaf template that displays an image and
+some error text. There are two specific pieces of information that it also renders: the
+request path of the error and the exception message. These aren’t the only details
+available to an error page, however. By default, Spring Boot makes the following error
+attributes available to the error view:
+■ timestamp—The time that the error occurred
+■ status—The HTTP status code
+■ error—The error reason
+■ exception—The class name of the exception
+■ message—The exception message (if the error was caused by an exception)
+■ errors—Any errors from a BindingResult exception (if the error was caused
+by an exception)
+■ trace—The exception stack trace (if the error was caused by an exception)
+■ path—The URL path requested when the error occurred
+
+
+
+ Summary
+Spring Boot eliminates much of the boilerplate configuration that’s often required in
+Spring applications. But by letting Spring Boot do all of the configuration, you’re
+relying on it to configure components in ways that suit your application. When autoconfiguration doesn’t
+ fit your needs, Spring Boot allows you to override and fine-tune
+the configuration it provides.
+ Overriding auto-configuration is a simple matter of writing explicit Spring configuration as you would
+  in the absence of Spring Boot. Spring Boot’s auto-configuration is
+designed to favor application-provided configuration over its own auto-configuration.
