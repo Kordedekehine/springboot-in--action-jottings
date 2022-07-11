@@ -1,0 +1,242 @@
+CHAPTER 3
+
+ The best way to know for sure where you’re going when writing applications is
+to write tests that assert the desired behavior of an application. If those tests fail,
+you know you have some work to do. If they pass, then you’ve arrived (at least until
+you think of some more tests that you can write).
+Whether you write tests first or after the code has already been written, it’s
+important that you write tests to not only verify the accuracy of your code, but to
+also to make sure it does everything you expect it to. Tests are also a great safeguard
+to make sure that things don’t break as your application continues to evolve.
+
+TYPES OF TEST
+UNIT TESTING,INTEGRATION TEST
+
+ When it comes to writing unit tests, Spring is generally out of the picture. Loose
+coupling and interface-driven design, which Spring encourages, makes it really
+easy to write unit tests. But Spring isn’t necessarily involved in those unit tests.
+
+Integration tests, on the other hand, require some help from Spring. If Spring is
+responsible for configuring and wiring up the components in your production application,
+ then Spring should also be responsible for configuring and wiring up those
+components in your tests.
+
+Spring’s SpringJUnit4ClassRunner helps load a Spring application context in
+JUnit-based application tests. Spring Boot builds on Spring’s integration testing support by
+enabling auto-configuration and web server startup when testing Spring Boot
+applications. It also offers a handful of useful testing utilities.
+
+
+Integration testing auto-configuration
+At the core of everything that the Spring Framework does, its most essential task is to
+wire together all of the components that make up an application. It does this by reading a
+wiring specification (whether it be XML, Java-based, Groovy-based, or otherwise),
+instantiating beans in an application context, and injecting beans into other beans
+that depend on them
+When integration testing a Spring application, it’s important to let Spring wire up
+the beans that are the target of the test the same way it wires up those beans when the
+application is running in production. Sure, you might be able to manually instantiate
+the components and inject them into each other, but for any substantially big application, that can be an arduous task.
+Moreover, Spring offers additional facilities such as
+component-scanning, autowiring, and declarative aspects such as caching, transactions,
+and security. Given all that would be required to recreate what Spring does, it’s
+generally best to let Spring do the heavy lifting, even in an integration test.
+ Spring has offered excellent support for integration testing since version 1.1.1.
+Since Spring 2.5, integration testing support has been offered in the form of
+SpringJUnit4ClassRunner, a JUnit class runner that loads a Spring application context for use in a JUnit test
+and enables autowiring of beans into the test class.
+
+
+
+Testing web applications
+One of the nice things about Spring MVC is that it promotes a programming model
+around plain old Java objects (POJOs) that are annotated to declare how they should
+process web requests. This programming model is not only simple, it enables you to
+treat controllers just as you would any other component in your application. You
+might even be tempted to write tests against your controller that test them as POJOs.
+ For instance, consider the addToReadingList() method from ReadingListController:
+@RequestMapping(method=RequestMethod.POST)
+public String addToReadingList(Book book) {
+book.setReader(reader);
+readingListRepository.save(book);
+return "redirect:/readingList";
+}
+If you were to disregard the @RequestMapping method, you’d be left with a rather
+basic Java method. It wouldn’t take much to imagine a test that provides a mock
+implementation of ReadingListRepository, calls addToReadingList() directly, and
+asserts the return value and verifies the call to the repository’s save() method.
+ The problem with such a test is that it only tests the method itself. While that’s
+better than no test at all, it fails to test that the method handles a POST request to
+/readingList. It also fails to test that form fields are properly bound to the Book
+parameter. And although you could assert that the returned String contains a certain
+value, it would be impossible to test definitively that the request is, in fact, redirected
+to /readingList after the method is finished.
+ To properly test a web application, you need a way to throw actual HTTP requests at
+it and assert that it processes those requests correctly. Fortunately, there are two options
+available to Spring Boot application developers that make those kinds of tests possible:
+■ Spring Mock MVC—Enables controllers to be tested in a mocked approximation
+of a servlet container without actually starting an application server
+■ Web integration tests—Actually starts the application in an embedded servlet container (such as Tomcat or Jetty), enabling tests that exercise the application in a
+real application server
+Each of these kinds of tests has its share of pros and cons. Obviously, starting a server
+will result in a slower test than mocking a servlet container.
+ But there’s no doubt that
+server-based tests are closer to the real-world environment that they’ll be running in
+when deployed to production.
+ We’re going to start by looking at how you can test a web application using Spring’s
+Mock MVC test framework. Then, in section 4.3, you’ll see how to write tests against an
+application that’s actually running in an application server
+
+
+
+Mocking Spring MVC
+Since Spring 3.2, the Spring Framework has had a very useful facility for testing web
+applications by mocking Spring MVC. This makes it possible to perform HTTP
+requests against a controller without running the controller within an actual servlet
+container. Instead, Spring’s Mock MVC framework mocks enough of Spring MVC to
+make it almost as though the application is running within a servlet container … but
+it’s not.
+ To set up a Mock MVC in your test, you can use MockMvcBuilders. This class offers
+two static methods:
+■ standaloneSetup()—Builds a Mock MVC to serve one or more manually created
+and configured controllers
+■ webAppContextSetup()—Builds a Mock MVC using a Spring application context, which presumably includes one or more configured controllers
+The primary difference between these two options is that standaloneSetup() expects
+you to manually instantiate and inject the controllers you want to test, whereas
+webAppContextSetup() works from an instance of WebApplicationContext, which
+itself was probably loaded by Spring. The former is slightly more akin to a unit test in
+that you’ll likely only use it for very focused tests around a single controller. The latter,
+however, lets Spring load your controllers as well as their dependencies for a fullblown integration test.
+ For our purposes, we’re going to use webAppContextSetup() so that we can test
+the ReadingListController as it has been instantiated and injected from the application context that Spring Boot has auto-configured.
+ The webAppContextSetup() takes a WebApplicationContext as an argument.
+Therefore, we’ll need to annotate the test class with @WebAppConfiguration and use
+@Autowired to inject the WebApplicationContext into the test as an instance variable.
+The following listing shows the starting point for our Mock MVC tests.
+
+
+
+
+The use of @SpringApplicationConfiguration is largely identical to @ContextConfiguration. But unlike @ContextConfiguration, @SpringApplicationConfiguration loads the Spring application context using SpringApplication the same way
+and with the same treatment it would get if it was being loaded in a production application. This includes the loading of external properties and Spring Boot logging.
+1 As of Spring 4.2, you can optionally use SpringClassRule and SpringMethodRule as JUnit rule-based
+alternatives to SpringJUnit4ClassRunner.
+Tests address
+service
+ Suffice it to say that, for the most part, @SpringApplicationConfiguration
+replaces @ContextConfiguration when writing tests for Spring Boot applications.
+We’ll certainly use @SpringApplicationConfiguration throughout this chapter as we
+write tests for our Spring Boot application, including tests that target the web front
+end of the application.
+
+
+
+ Testing web security
+Spring Security offers support for testing secured web applications easily. In order to
+take advantage of it, you must add Spring Security’s test module to your build.
+The following testCompile dependency in Gradle is all you need:
+testCompile("org.springframework.security:spring-security-test")
+Or if you’re using Maven, add the following <dependency> to your build:
+<dependency>
+<groupId>org.springframework.security</groupId>
+<artifactId>spring-security-test</artifactId>
+<scope>test</scope>
+</dependency>
+
+
+
+Testing a running application
+When it comes to testing web applications, nothing beats the real thing. Firing up the
+application in a real server and hitting it with a real web browser is far more indicative
+of how it will behave in the hands of users than poking at it with a mock testing
+engine.
+ But real tests in real servers with real web browsers can be tricky. Although there
+are build-time plugins for deploying applications in Tomcat or Jetty, they are clunky to
+set up. Moreover, it’s nearly impossible to run any one of a suite of many such tests in
+isolation or without starting up your build tool.
+ Spring Boot, however, has a solution. Because Spring Boot already supports running embedded
+ servlet containers such as Tomcat or Jetty as part of the running application, it stands to reason that the same mechanism could be used to start up the
+application along with its embedded servlet container for the duration of a test.
+ That’s exactly what Spring Boot’s @WebIntegrationTest annotation does. By annotating a test class with @WebIntegrationTest, you declare that you want Spring Boot to
+not only create an application context for your test, but also to start an embedded servlet container. Once the application is running along with the embedded container, you
+can issue real HTTP requests against it and make assertions against the results.
+ For example, consider the simple web test in listing 4.5, which uses @WebIntegrationTest to start the application along with a server and uses Spring’s RestTemplate
+to perform HTTP requests against the application.
+
+
+ Starting the server on a random port
+As mentioned, the default behavior is to start the server listening on port 8080. That’s
+fine for running a single test at a time on a machine where no other server is already
+listening on port 8080. But if you’re like me, you’ve probably always got something listening on port 8080 on your local machine. In that case, the test would fail because
+the server wouldn’t start due to the port collision. There must be a better way.
+ Fortunately, it’s easy enough to ask Spring Boot to start up the server on a randomly selected port. One way is to set the server.port property to 0 to ask Spring
+Boot to select a random available port. @WebIntegrationTest accepts an array of
+String for its value attribute. Each entry in the array is expected to be a name/value
+pair, in the form name=value, to set properties for use in the test. To set server.port
+you can use @WebIntegrationTest like this:
+@WebIntegrationTest(value={"server.port=0"})
+Or, because there’s only one property being set, it can take a simpler form:
+@WebIntegrationTest("server.port=0")
+Setting properties via the value attribute is handy in the general sense, but @WebIntegrationTest also offers a randomPort attribute for a more expressive way of asking
+the server to be started on a random port. You can ask for a random port by setting
+randomPort to true:
+@WebIntegrationTest(randomPort=true)
+Now that we have the server starting on a random port, we need to be sure we use the
+correct port when making web requests. At the moment, the getForObject() method
+is hard-coded with port 8080 in its URL. If the port is randomly chosen, how can we
+construct the request to use the right port?
+
+
+
+Testing HTML pages with Selenium
+RestTemplate is fine for simple requests and it’s perfect for testing REST endpoints.
+But even though it can be used to make requests against URLs that return HTML
+pages, it’s not very convenient for asserting the contents of the page or performing
+operations on the page itself. At best, you’ll be able to assert the precise content of the
+resulting HTML (which will result in fragile tests). But you won’t easily be able to assert
+selected content on the page or perform operations such as clicking links or submitting forms.
+ A better choice for testing HTML applications is Selenium (www.seleniumhq.org).
+Selenium does more than just perform requests and fetch the results for you to verify.
+Selenium actually fires up a web browser and executes your test within the context of the
+browser. It’s as close as you can possibly get to performing the tests manually with your
+own hands. But unlike manual testing, Selenium tests are automated and repeatable.
+ To test our reading list application using Selenium, let’s write a test that fetches the
+home page, fills out the form for a new book, posts the form, and then finally asserts
+that the landing page includes the newly added book.
+ First we’ll need to add Selenium to the build as a test dependency:
+testCompile("org.seleniumhq.selenium:selenium-java:2.45.0")
+Now we can write the test class. The following listing shows a basic template for a Selenium test that uses Spring Boot’s @WebIntegrationTest.
+
+
+
+Summary
+Testing is an important part of developing quality software. Without a good suite of
+tests, you’ll never know for sure if your application is doing what it’s expected to do.
+ For unit tests, which focus on a single component or a method of a component,
+Spring isn’t really necessary. The benefits and techniques promoted by Spring—loose
+Fills in and
+submits form
+Asserts new
+book in list
+Licensed to Thomas Snead <n.ordickan@gmail.com> www.it-ebooks.info
+Summary 91
+coupling, dependency injection, and interface-driven design—make writing unit tests
+easy. But Spring doesn’t need to be directly involved in unit tests.
+ Integration-testing multiple components, however, begs for help from Spring. In
+fact, if Spring is responsible for wiring those components up at runtime, then Spring
+should also be responsible for wiring them up in integration tests.
+ The Spring Framework provides integration-testing support in the form of a JUnit
+class runner that loads a Spring application context and enables beans from the context
+to be injected into a test. Spring Boot builds upon Spring integration-testing support
+with a configuration loader that loads the application context in the same way as Spring
+Boot itself, including support for externalized properties and Spring Boot logging.
+ Spring Boot also enables in-container testing of web applications, making it possible to fire up your application to be served by the same container that it will be served
+by when running in production. This gives your tests the closest thing to a real-world
+environment for verifying the behavior of the application.
+ At this point we’ve built a rather complete (albeit simple) application that leverages Spring Boot starters and auto-configuration to handle the grunt work so that we
+can focus on writing our application. And we’ve also seen how to take advantage of
+Spring Boot’s support for testing the application. Coming up in the next couple of
+chapters, we’re going to take a slightly different tangent and explore the ways that
+Groovy can make developing Spring Boot applications even easier. We’ll start in the
+next chapter by looking at a few features from the Grails framework that have made
+their way into Spring Boot.
